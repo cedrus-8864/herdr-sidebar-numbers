@@ -1,0 +1,50 @@
+id = "cedrus.sidebar-numbers"
+name = "Sidebar Numbers"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Publish workspace/agent positions as a `num` metadata token so the sidebar can show them as $num."
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "sync"
+title = "Renumber sidebar"
+contexts = ["workspace", "tab", "pane"]
+command = ["bun", "number-sidebar.js"]
+
+# Only events that can actually renumber a row. Focus and status events are
+# deliberately absent: they fire constantly and move nothing.
+[[events]]
+on = "workspace.created"
+command = ["bun", "number-sidebar.js"]
+
+[[events]]
+on = "workspace.closed"
+command = ["bun", "number-sidebar.js"]
+
+[[events]]
+on = "workspace.moved"
+command = ["bun", "number-sidebar.js"]
+
+# Agents follow tab order within a workspace, so a tab reorder shifts them.
+[[events]]
+on = "tab.moved"
+command = ["bun", "number-sidebar.js"]
+
+[[events]]
+on = "pane.closed"
+command = ["bun", "number-sidebar.js"]
+
+[[events]]
+on = "pane.moved"
+command = ["bun", "number-sidebar.js"]
+
+# An agent's process exits -> it leaves the agent list -> everything after shifts.
+[[events]]
+on = "pane.exited"
+command = ["bun", "number-sidebar.js"]
+
+# ...and the reverse: a pane becomes an agent and joins the list.
+# `pane.created` is NOT subscribed -- a fresh pane hosts no agent yet.
+[[events]]
+on = "pane.agent_detected"
+command = ["bun", "number-sidebar.js"]
