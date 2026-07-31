@@ -47,16 +47,29 @@ Numbers appear on the next event that changes the sidebar; run
 `herdr plugin action invoke cedrus.sidebar-numbers.sync` to fill them in
 immediately.
 
+## When it renumbers
+
+The plugin runs on the eight events that can move a row, each verified to
+actually fire on herdr 0.7.5: workspaces created, closed, or reordered; tabs
+reordered; panes closed, moved, or exited; and a pane being detected as an
+agent. It also runs at server startup, because herdr keeps metadata tokens in
+memory only — a restarted server would otherwise come back with an unnumbered
+sidebar until something happened.
+
+Nothing polls. If a number ever looks stale, `herdr plugin action invoke
+cedrus.sidebar-numbers.sync` recomputes everything.
+
 ## Notes
 
 `$num` must be written as a bare string. `{ token = "$num", bold = true }`
 passes `herdr config check` and then renders nothing — that is a herdr
 limitation for custom tokens, not a bug here.
 
-Agent numbers assume the default `agent_panel_sort = "spaces"`. With
+Agent numbers require the default `agent_panel_sort = "spaces"`. Under
 `"priority"` the agent panel is an attention queue rather than a per-workspace
-list, and the numbers would not match what the shortcuts do. Workspace numbers
-are correct either way.
+list, so the plugin **clears** agent numbers instead of writing misleading ones
+— a wrong digit is worse than no digit. Workspace numbers are correct either
+way.
 
 Uninstalling leaves the last-written tokens behind; they simply stop updating.
 Remove `$num` from your `rows` to hide them.

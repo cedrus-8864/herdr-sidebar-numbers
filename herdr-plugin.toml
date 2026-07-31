@@ -1,9 +1,14 @@
 id = "cedrus.sidebar-numbers"
 name = "Sidebar Numbers"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.7.0"
 description = "Publish workspace/agent positions as a `num` metadata token so the sidebar can show them as $num."
 platforms = ["macos", "linux"]
+
+# Metadata tokens are runtime-only -- herdr's session.json does not persist
+# them, so a restarted server comes back with an unnumbered sidebar.
+[[startup]]
+command = ["bun", "number-sidebar.js"]
 
 [[actions]]
 id = "sync"
@@ -12,7 +17,9 @@ contexts = ["workspace", "tab", "pane"]
 command = ["bun", "number-sidebar.js"]
 
 # Only events that can actually renumber a row. Focus and status events are
-# deliberately absent: they fire constantly and move nothing.
+# deliberately absent: they fire constantly and move nothing. Every event below
+# was verified to fire on 0.7.5 -- being accepted by the manifest parser is not
+# the same as being delivered.
 [[events]]
 on = "workspace.created"
 command = ["bun", "number-sidebar.js"]

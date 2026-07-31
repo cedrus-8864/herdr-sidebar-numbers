@@ -43,14 +43,26 @@ Three decisions carry the design:
 
 ### Constraints worth knowing before changing behavior
 
-- **Agent numbers assume `agent_panel_sort = "spaces"`.** Under `"priority"` the panel is an
-  attention queue and these digits would point at the wrong agent. herdr exposes that setting nowhere
-  programmatically, so this is documented, not defended in code.
+- **Agent numbers require `agent_panel_sort = "spaces"`.** Under `"priority"` the panel is an
+  attention queue and list position would point at the wrong agent, so the plugin clears `num` on
+  agents instead of writing it. The setting is read from `dirname($HERDR_SOCKET_PATH)/config.toml` —
+  herdr passes the socket path to every plugin, which beats guessing at XDG layouts.
+- **Metadata tokens are runtime-only.** `session.json` does not persist them, so a restarted server
+  has an unnumbered sidebar until something happens. That is what the `[[startup]]` command is for.
+- **`startup` is an array of tables.** `[startup]` fails the manifest parse with `invalid type: map,
+  expected a sequence`; it must be `[[startup]]`. A broken manifest degrades to
+  `manifest unavailable` in `herdr plugin list` and the plugin silently stops receiving events.
 - **The plugin-hook allowlist is narrower than the events API** and not guessable: `workspace.updated`
   is rejected while the whole `workspace.created/closed/moved` lifecycle is accepted. A name appearing
   in `herdr api schema --json` proves the *server* emits it, never that a plugin may subscribe. After
   adding an event, run `herdr plugin list` and confirm zero warnings — a rejected hook fails silently
   otherwise.
+- **Accepted is not delivered.** All eight subscribed events were confirmed to actually invoke the
+  plugin. `workspace.moved` and `tab.moved` have no CLI, so triggering them means calling the socket
+  directly — newline-delimited JSON to `$HERDR_SOCKET_PATH`, e.g.
+  `{"id":"p","method":"workspace.move","params":{"workspace_id":"w1","insert_index":0}}`.
+- **`herdr plugin log list --limit N` returns the OLDEST N runs**, printed oldest-first. Reading
+  `logs[0]` as "the latest run" gives a stale answer that looks plausible.
 - **Subscribe only to events that can renumber a row.** `workspace.focused` and `pane.created` were
   removed on purpose: both fire constantly and can never change a position (a fresh pane hosts no
   agent; it joins the list at `pane.agent_detected`).
