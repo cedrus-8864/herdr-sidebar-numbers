@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A [herdr](https://herdr.dev) plugin (herdr = terminal workspace manager for AI agents). herdr invokes
 `bun number-sidebar.js` on subscribed events; the script writes each workspace's and each agent's
-1-based sidebar position into a `num` metadata token. The user then renders it as `$num` in their own
-`[ui.sidebar.*] rows`. No build step, no dependencies, no `package.json` — bun + node stdlib.
+1-based sidebar position into a `num` metadata token, plus a constant `pad` spacer on agents. The
+user renders those as `$num` / `$pad` in their own `[ui.sidebar.*] rows`. No build step, no
+dependencies, no `package.json` — bun + node stdlib.
 
 ## Commands
 
@@ -70,6 +71,13 @@ Three decisions carry the design:
   argument it choked *after*, not the real cause.
 - **Custom `$` tokens only render as bare strings** in `rows`. `{ token = "$num", bold = true }`
   passes `herdr config check` and then draws nothing.
+- **A spacer token can never shift a row by less than 4 cells.** herdr inserts `" · "` after it, so
+  the shift is 3 + the pad's width, and that separator stays visible. `PAD` is U+2800 (braille
+  blank), never a space: herdr trims a whitespace-only token value to empty and drops the token.
+- **Write metadata tokens, never `display_agent` or `title`.** Those look like display-only
+  channels too, but they are *shared* — the sidebar, the pane borders and other plugins' notifiers
+  all read them, so padding one to fix a sidebar column corrupts every other consumer. `tokens` is
+  the only surface nothing else reads.
 
 ## Testing
 
