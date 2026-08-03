@@ -47,33 +47,6 @@ Numbers appear on the next event that changes the sidebar; run
 `herdr plugin action invoke cedrus.sidebar-numbers.sync` to fill them in
 immediately.
 
-## `$pad` — lining a second agent row up with the first
-
-herdr indents an entry's second row by 2 columns, so it starts under the number
-rather than under the label. `$pad` is a spacer token that pushes it across:
-
-```toml
-[ui.sidebar.agents]
-rows = [["$num", "state_icon", "pane"], ["$pad", "terminal_title_stripped"]]
-```
-
-```
-1 · ✔ bk-volume-api          1 · ✔ bk-volume-api
-claude · Claude Code   ->          ·  Claude Code
-```
-
-It is written on every agent, under any `agent_panel_sort` — it aligns a row, it
-never points at one. Ignore the token and nothing changes.
-
-The offset is **3 + the pad's own width**, because herdr inserts its `" · "`
-separator after the token — which is also why that separator survives as a
-bullet, and why no pad width can produce a shift smaller than 4. The width is
-fixed at 3 cells for a `["$num", "state_icon", "pane"]` first row; a different
-first row needs `PAD_CELLS` in `number-sidebar.js` changed to match.
-
-The pad is U+2800 (braille blank), not a space — herdr trims a whitespace-only
-token value to empty and then drops the token.
-
 ## When it renumbers
 
 The plugin runs on the eight events that can move a row, each verified to
@@ -99,7 +72,7 @@ list, so the plugin **clears** agent numbers instead of writing misleading ones
 way.
 
 Uninstalling leaves the last-written tokens behind; they simply stop updating.
-Remove `$num` / `$pad` from your `rows` to hide them.
+Remove `$num` from your `rows` to hide them.
 
 ## License
 

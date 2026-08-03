@@ -15,15 +15,6 @@ import { dirname, join } from "node:path";
 const herdr = process.env.HERDR_BIN_PATH || "herdr";
 const SOURCE = "sidebar-numbers";
 
-// `$pad` is a spacer for a second agent row, so it can start under the first
-// row's label instead of under its leading columns. U+2800 (braille blank), not
-// a space: herdr trims a whitespace-only token value to empty and drops it.
-// ponytail: width fixed for a `["$num", "state_icon", "pane"]` first row. herdr
-// adds its own " · " (3 cells) after the token, so a row shifts by 3 + PAD_CELLS
-// -- give the plugin a config file if a second layout ever needs another offset.
-const PAD_CELLS = 3;
-export const PAD = "⠀".repeat(PAD_CELLS);
-
 function json(args) {
   const r = spawnSync(herdr, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   if (r.status !== 0) {
@@ -36,12 +27,12 @@ function json(args) {
 // if that ever becomes a number the comparison silently writes on every run.
 // Skipping unchanged rows is what keeps an event burst from spawning a process
 // per row for nothing.
-function writeToken(kind, id, name, current, value) {
-  // An absent token reads as undefined; `value === null` means "clear it". Both
+function writeNum(kind, id, current, num) {
+  // An absent token reads as undefined; `num === null` means "clear it". Both
   // normalize to null so an already-absent token is not cleared every run.
-  if ((current ?? null) === value) return;
+  if ((current ?? null) === num) return;
   // herdr's CLI wants the positional before the flags and rejects --flag=value.
-  const flags = value === null ? ["--clear-token", name] : ["--token", `${name}=${value}`];
+  const flags = num === null ? ["--clear-token", "num"] : ["--token", `num=${num}`];
   json([kind, "report-metadata", id, "--source", SOURCE, ...flags]);
 }
 
@@ -70,9 +61,7 @@ if (import.meta.main) {
   const { workspaces, agents } = json(["api", "snapshot"]).result.snapshot;
 
   // Workspace numbers come straight from herdr and are correct under any sort.
-  workspaces.forEach((w) =>
-    writeToken("workspace", w.workspace_id, "num", w.tokens?.num, String(w.number)),
-  );
+  workspaces.forEach((w) => writeNum("workspace", w.workspace_id, w.tokens?.num, String(w.number)));
 
   const sort = agentPanelSort();
   const groupedByWorkspace = sort === "spaces" || sort === "workspaces";
@@ -80,10 +69,8 @@ if (import.meta.main) {
   // The snapshot already lists agents grouped by workspace order, which is what
   // the "spaces" panel renders -- so list position is the shortcut digit.
   // Under any other sort we clear instead: a wrong digit is worse than none.
-  // `pad` is independent of the sort: it aligns a row, it never points at a row.
   agents.forEach((a, i) => {
-    writeToken("pane", a.pane_id, "num", a.tokens?.num, groupedByWorkspace ? String(i + 1) : null);
-    writeToken("pane", a.pane_id, "pad", a.tokens?.pad, PAD);
+    writeNum("pane", a.pane_id, a.tokens?.num, groupedByWorkspace ? String(i + 1) : null);
   });
 
   const note = groupedByWorkspace ? "" : ` (agent numbers cleared: agent_panel_sort = "${sort}")`;
