@@ -33,9 +33,10 @@ on = "workspace.moved"
 command = ["bun", "number-sidebar.js"]
 
 # herdr 0.8.0's atomic worktree-group reordering (workspace.move_block) fires
-# this instead of one workspace.moved per member -- confirmed accepted by the
-# manifest parser (0.7.5 rejected it: it didn't exist yet), not yet confirmed
-# delivered live. min_herdr_version bumped to 0.8.0 because of this line.
+# this instead of one workspace.moved per member. Confirmed both accepted by
+# the manifest parser (0.7.5 rejected it: it didn't exist yet) and delivered
+# live (dragging a worktree group invoked the plugin). min_herdr_version
+# bumped to 0.8.0 because of this line.
 [[events]]
 on = "workspace.reordered"
 command = ["bun", "number-sidebar.js"]

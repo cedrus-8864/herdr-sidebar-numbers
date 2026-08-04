@@ -63,17 +63,16 @@ Three decisions carry the design:
   other half). A name appearing in `herdr api schema --json` proves the *server* emits it, never that
   a plugin may subscribe — and neither check is a one-time fact: re-run it after any herdr upgrade
   before assuming last version's allowlist still holds.
-- **Accepted is not delivered.** Eight of the nine subscribed events were confirmed to actually invoke
-  the plugin. `workspace.moved` and `tab.moved` have no CLI, so triggering them means calling the
-  socket directly — newline-delimited JSON to `$HERDR_SOCKET_PATH`, e.g.
-  `{"id":"p","method":"workspace.move","params":{"workspace_id":"w1","insert_index":0}}`. The ninth,
-  `workspace.reordered` (added for 0.8.0's atomic worktree-group reordering / `workspace.move_block`),
-  is only confirmed *accepted*, not confirmed *delivered* — the CLI has no `move-block` subcommand
-  either, and triggering it live means either an actual worktree-group drag or the same raw-socket
-  approach with `{"method":"workspace.move_block","params":{"workspace_ids":[...],
-  "before_workspace_id":"..."}}`, both of which reorder the user's live workspaces. Don't run either
-  without asking first — unlike a metadata write, this changes visible session state the user is
-  looking at.
+- **Accepted is not delivered.** All nine subscribed events were confirmed to actually invoke the
+  plugin. `workspace.moved` and `tab.moved` have no CLI, so triggering them means calling the socket
+  directly — newline-delimited JSON to `$HERDR_SOCKET_PATH`, e.g.
+  `{"id":"p","method":"workspace.move","params":{"workspace_id":"w1","insert_index":0}}`.
+  `workspace.reordered` (added for 0.8.0's atomic worktree-group reordering / `workspace.move_block`)
+  has the same no-CLI shape (`{"method":"workspace.move_block","params":{"workspace_ids":[...],
+  "before_workspace_id":"..."}}`), and both a raw-socket call and an actual worktree-group drag reorder
+  the user's live workspaces — confirming *this one* specifically needed the user to drag a real
+  worktree group and check the log, since a raw-socket call was blocked as too invasive to run
+  unprompted (auto-mode declined it outright; it bypasses the CLI the classifier reasons about).
 - **`herdr plugin log list --limit N` returns the OLDEST N runs**, printed oldest-first. Reading
   `logs[0]` as "the latest run" gives a stale answer that looks plausible.
 - **Subscribe only to events that can renumber a row.** `workspace.focused` and `pane.created` were
