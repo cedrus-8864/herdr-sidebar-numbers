@@ -79,18 +79,23 @@ row can show the project you're actually looking at right now:
 [ui.sidebar.spaces]
 rows = [
   ["$num", "state_icon", "workspace"],
-  ["$pad", "branch", "git_status"],
   ["$pad", "$tab_cwd"],
+  ["$pad", "branch", "git_status"],
 ]
 ```
 
 ```
 3 · ○ api
-  · build-staging ↓21
   · smartmenu-portal
+  · build-staging ↓21
 ```
 
-It's on its own row, not swapped in for `workspace` on row 1, because a custom
+Row order is a plain preference, not a technical constraint — swap `$tab_cwd`
+and `branch`/`git_status` freely, `$pad`'s width doesn't depend on which comes
+first. A workspace that's not a Git repo (`~`, a plain directory) has nothing
+for `branch`/`git_status` to render, and herdr already drops an entirely-empty
+row on its own — no blank `· ` line, no config needed. It's on its own row,
+not swapped in for `workspace` on row 1, because a custom
 token can't be styled bold — herdr only styles built-in tokens per their kind,
 and a custom token in a styled map (`{ token = "$tab_cwd", bold = true }`)
 passes `config check` and **renders nothing at all**, not just unstyled (same
@@ -118,8 +123,8 @@ on every non-first row, `$tab_cwd`'s included:
 [ui.sidebar.spaces]
 rows = [
   ["$num", "state_icon", "workspace"],
-  ["$pad", "branch", "git_status"],
   ["$pad", "$tab_cwd"],
+  ["$pad", "branch", "git_status"],
 ]
 ```
 
