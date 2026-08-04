@@ -10,7 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 const herdr = process.env.HERDR_BIN_PATH || "herdr";
 const SOURCE = "sidebar-numbers";
@@ -66,15 +66,38 @@ function agentPanelSort() {
   }
 }
 
+// A workspace's active_tab_id is herdr's own "last-focused tab in this
+// workspace" -- separate from the single globally `focused` pane, and exactly
+// what a sidebar row wants for "what am I actually looking at in here". We
+// derive the label from that tab's own first pane's cwd rather than parsing
+// herdr-autolabel's rendered tab label (e.g. "7 · smartmenu-portal · claude"):
+// parsing ties this plugin to autolabel's tab_format and breaks the moment
+// that format string changes, or if autolabel isn't installed / sync_tabs is
+// off. "First pane" is list order, not the layout-sorted top-left pane
+// autolabel's `tab_source = "active"` computes -- close enough for a glanceable
+// hint, not worth a second `pane layout` call per workspace to match exactly.
+function activeTabCwd(workspace, panesByTab) {
+  const cwd = panesByTab.get(workspace.active_tab_id)?.cwd;
+  return cwd ? basename(cwd) : null;
+}
+
 // Guarded so the test can import the pure helpers without renumbering anything.
 if (import.meta.main) {
-  const { workspaces, agents } = json(["api", "snapshot"]).result.snapshot;
+  const { workspaces, agents, panes } = json(["api", "snapshot"]).result.snapshot;
+
+  // First pane in snapshot order per tab -- see activeTabCwd() above.
+  const panesByTab = new Map();
+  for (const p of panes) {
+    if (!panesByTab.has(p.tab_id)) panesByTab.set(p.tab_id, p);
+  }
 
   // Workspace numbers come straight from herdr and are correct under any sort.
-  // `pad` is independent of numbering: it aligns a row, it never points at one.
+  // `pad` and `tab_cwd` are independent of numbering: they describe a row, they
+  // never point at one.
   workspaces.forEach((w) => {
     writeToken("workspace", w.workspace_id, "num", w.tokens?.num, String(w.number));
     writeToken("workspace", w.workspace_id, "pad", w.tokens?.pad, WORKSPACE_PAD);
+    writeToken("workspace", w.workspace_id, "tab_cwd", w.tokens?.tab_cwd, activeTabCwd(w, panesByTab));
   });
 
   const sort = agentPanelSort();

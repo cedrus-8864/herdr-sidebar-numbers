@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A [herdr](https://herdr.dev) plugin (herdr = terminal workspace manager for AI agents). herdr invokes
 `bun number-sidebar.js` on subscribed events; the script writes each workspace's and each agent's
-1-based sidebar position into a `num` metadata token, plus a constant `pad` spacer on workspaces only.
-The user renders those as `$num` / `$pad` in their own `[ui.sidebar.*] rows`. No build step, no
-dependencies, no `package.json` — bun + node stdlib.
+1-based sidebar position into a `num` metadata token, plus two workspace-only tokens: a constant `pad`
+spacer and `tab_cwd` (the cwd basename of the workspace's currently-active tab). The user renders those
+as `$num` / `$pad` / `$tab_cwd` in their own `[ui.sidebar.*] rows`. No build step, no dependencies, no
+`package.json` — bun + node stdlib.
 
 ## Commands
 
@@ -76,9 +77,12 @@ Three decisions carry the design:
   unprompted (auto-mode declined it outright; it bypasses the CLI the classifier reasons about).
 - **`herdr plugin log list --limit N` returns the OLDEST N runs**, printed oldest-first. Reading
   `logs[0]` as "the latest run" gives a stale answer that looks plausible.
-- **Subscribe only to events that can renumber a row.** `workspace.focused` and `pane.created` were
-  removed on purpose: both fire constantly and can never change a position (a fresh pane hosts no
-  agent; it joins the list at `pane.agent_detected`).
+- **Subscribe only to events that can change what's rendered — renumbering a row is one way, changing a
+  row's content is another.** `workspace.focused` and `pane.created` stay unsubscribed: both fire
+  constantly and change neither. `tab.focused` **is** subscribed despite changing no position, because
+  it's the only event that moves a workspace's `active_tab_id`, which `tab_cwd` reads — don't read
+  "only renumbering events" as "only position-affecting events" when deciding whether a new event
+  belongs here.
 - **herdr's CLI wants positionals before flags and rejects `--flag=value`.** Its errors name the
   argument it choked *after*, not the real cause.
 - **Custom `$` tokens only render as bare strings** in `rows`. `{ token = "$num", bold = true }`
@@ -102,6 +106,13 @@ Three decisions carry the design:
   too, but they are *shared* — the sidebar, the pane borders and other plugins' notifiers all read
   them, so padding one to fix a sidebar column corrupts every other consumer. `tokens` is the only
   surface nothing else reads.
+- **Derive `tab_cwd` from a pane's own `cwd`, never from herdr-autolabel's rendered tab label.** The
+  rendered label (`"7 · smartmenu-portal · claude"`) is a *composed* string owned by a different
+  plugin's `tab_format` config; parsing it back apart couples this plugin to that format string and to
+  autolabel being installed at all. `cwd` is raw API data with no such dependency. Also: "first pane in
+  `api snapshot` order" is a deliberate simplification, not the visually top-left pane
+  herdr-autolabel's own `tab_source = "active"` computes via `pane layout` — good enough for a
+  glanceable hint, not worth a second CLI call per workspace to match exactly.
 
 ## Testing
 

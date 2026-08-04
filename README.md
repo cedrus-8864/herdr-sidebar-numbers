@@ -6,7 +6,11 @@ to, so you can see which one to press instead of counting rows.
 
 herdr computes those positions but exposes no sidebar token for them. This
 plugin publishes each workspace's and each agent's 1-based position as a `num`
-metadata token, which you render as `$num`.
+metadata token, which you render as `$num`. It also publishes two
+alignment/content helpers scoped to workspaces only: `$pad` (see below) and
+`$tab_cwd`, the project name of whichever tab you last focused in that
+workspace (see *`$tab_cwd`* below) — herdr's own `active_tab_id` per
+workspace, not the single global `focused` pane.
 
 ```
  1  bk-volume              1  ✳ bk-volume-api
@@ -60,15 +64,50 @@ back with an unnumbered sidebar until something happened.
 Nothing polls. If a number ever looks stale, `herdr plugin action invoke
 cedrus.sidebar-numbers.sync` recomputes everything.
 
+`$tab_cwd` additionally refreshes on `tab.focused` — the one event that
+changes a workspace's `active_tab_id` without moving any row, so it isn't in
+the renumbering list above.
+
+## `$tab_cwd` — showing what you're actually looking at
+
+A workspace's own label is whatever you (or herdr) named it once — it doesn't
+say which of its tabs you're currently in. `$tab_cwd` is the basename of the
+working directory of a pane in your last-focused tab in that workspace, so the
+row reflects the project you're actually looking at right now:
+
+```toml
+[ui.sidebar.spaces]
+rows = [["$num", "state_icon", "$tab_cwd"], ["$pad", "branch", "git_status"]]
+```
+
+```
+3 · ○ api                   3 · ○ smartmenu-portal
+  · build-staging ↓21   ->    · build-staging ↓21
+```
+
+It's a custom token, so it can't be styled bold like the built-in `workspace`
+token it typically replaces — herdr only styles built-in tokens per their
+kind, and a custom token in a styled map (`{ token = "$tab_cwd", bold = true
+}`) passes `config check` and renders nothing (same trap as `$num`, below).
+
+It reads a pane's `cwd` directly rather than parsing herdr-autolabel's
+rendered tab label (e.g. `"7 · smartmenu-portal · claude"`): parsing would tie
+this plugin to autolabel's `tab_format` and break the moment that string
+changes, or if autolabel isn't installed. For a tab with more than one pane it
+picks whichever pane comes first in `api snapshot` order, not the visually
+top-left one autolabel's own `tab_source = "active"` computes — close enough
+for a glanceable hint, and simplicity has to lose *some* precision somewhere.
+
 ## `$pad` — lining up a workspace's second row
 
 herdr indents an entry's second row by 2 columns, so it starts under the
 number rather than under the label. `$pad` is a spacer token that pushes it
-across, for a `["$num", "state_icon", "workspace"]` first row:
+across, for a `["$num", "state_icon", <label>]` first row (`workspace` or
+`$tab_cwd` — the pad width doesn't depend on which):
 
 ```toml
 [ui.sidebar.spaces]
-rows = [["$num", "state_icon", "workspace"], ["$pad", "branch", "git_status"]]
+rows = [["$num", "state_icon", "$tab_cwd"], ["$pad", "branch", "git_status"]]
 ```
 
 ```
@@ -103,7 +142,7 @@ list, so the plugin **clears** agent numbers instead of writing misleading ones
 way.
 
 Uninstalling leaves the last-written tokens behind; they simply stop updating.
-Remove `$num` / `$pad` from your `rows` to hide them.
+Remove `$num` / `$pad` / `$tab_cwd` from your `rows` to hide them.
 
 ## License
 

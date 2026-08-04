@@ -1,6 +1,6 @@
 id = "cedrus.sidebar-numbers"
 name = "Sidebar Numbers"
-version = "0.3.0"
+version = "0.4.0"
 min_herdr_version = "0.8.0"
 description = "Publish workspace/agent positions as a `num` metadata token so the sidebar can show them as $num."
 platforms = ["macos", "linux"]
@@ -16,10 +16,11 @@ title = "Renumber sidebar"
 contexts = ["workspace", "tab", "pane"]
 command = ["bun", "number-sidebar.js"]
 
-# Only events that can actually renumber a row. Focus and status events are
-# deliberately absent: they fire constantly and move nothing. Every event below
-# was verified to fire on 0.7.5 -- being accepted by the manifest parser is not
-# the same as being delivered.
+# Events that can actually renumber a row, plus (see tab.focused below) events
+# that change a row's *content* without moving it. Most focus/status events are
+# still deliberately absent: they fire constantly and neither renumber nor
+# change content here. Every event below was verified to fire on 0.7.5 unless
+# noted -- being accepted by the manifest parser is not the same as delivered.
 [[events]]
 on = "workspace.created"
 command = ["bun", "number-sidebar.js"]
@@ -63,4 +64,11 @@ command = ["bun", "number-sidebar.js"]
 # `pane.created` is NOT subscribed -- a fresh pane hosts no agent yet.
 [[events]]
 on = "pane.agent_detected"
+command = ["bun", "number-sidebar.js"]
+
+# Doesn't renumber anything -- it's what changes a workspace's active_tab_id,
+# which `tab_cwd` reads. `workspace.focused` (global cursor) stays unsubscribed;
+# this is the per-workspace "last tab you looked at in here" signal instead.
+[[events]]
+on = "tab.focused"
 command = ["bun", "number-sidebar.js"]

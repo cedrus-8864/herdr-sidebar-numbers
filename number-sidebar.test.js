@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { basename } from "node:path";
 import { WORKSPACE_PAD, parseAgentPanelSort } from "./number-sidebar.js";
 
 // Runs against the live herdr session on purpose: the things that break here
@@ -21,6 +22,21 @@ test("every workspace and agent carries its 1-based position", () => {
   expect(snapshot.workspaces.map((w) => w.tokens?.pad)).toEqual(
     snapshot.workspaces.map(() => WORKSPACE_PAD),
   );
+
+  // tab_cwd should match the basename of the first pane (snapshot order)
+  // belonging to each workspace's active_tab_id -- recomputed independently
+  // here rather than imported, so the test can't pass by construction.
+  const firstPaneByTab = new Map();
+  for (const p of snapshot.panes) {
+    if (!firstPaneByTab.has(p.tab_id)) firstPaneByTab.set(p.tab_id, p);
+  }
+  expect(snapshot.workspaces.map((w) => w.tokens?.tab_cwd)).toEqual(
+    snapshot.workspaces.map((w) => {
+      const cwd = firstPaneByTab.get(w.active_tab_id)?.cwd;
+      return cwd ? basename(cwd) : undefined;
+    }),
+  );
+
   expect(snapshot.agents.map((a) => a.tokens?.num)).toEqual(
     snapshot.agents.map((_, i) => String(i + 1)),
   );
