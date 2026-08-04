@@ -52,15 +52,28 @@ Three decisions carry the design:
 - **`startup` is an array of tables.** `[startup]` fails the manifest parse with `invalid type: map,
   expected a sequence`; it must be `[[startup]]`. A broken manifest degrades to
   `manifest unavailable` in `herdr plugin list` and the plugin silently stops receiving events.
-- **The plugin-hook allowlist is narrower than the events API** and not guessable: `workspace.updated`
-  is rejected while the whole `workspace.created/closed/moved` lifecycle is accepted. A name appearing
-  in `herdr api schema --json` proves the *server* emits it, never that a plugin may subscribe. After
-  adding an event, run `herdr plugin list` and confirm zero warnings — a rejected hook fails silently
-  otherwise.
-- **Accepted is not delivered.** All eight subscribed events were confirmed to actually invoke the
-  plugin. `workspace.moved` and `tab.moved` have no CLI, so triggering them means calling the socket
-  directly — newline-delimited JSON to `$HERDR_SOCKET_PATH`, e.g.
-  `{"id":"p","method":"workspace.move","params":{"workspace_id":"w1","insert_index":0}}`.
+- **The plugin-hook allowlist is narrower than the events API, not guessable, and moves between
+  versions.** On 0.7.5, `workspace.updated` was rejected while the rest of the
+  `workspace.created/closed/moved` lifecycle was accepted — the allowlist is not "all lifecycle events
+  for an entity." On 0.8.0 `workspace.updated` and the new `workspace.reordered`/`tab.renamed`/
+  `worktree.created`/`worktree.removed` became accepted, while `pane.updated`, `pane.output_changed`
+  and the new `workspace.metadata_updated`/`layout.updated` are still rejected — checked directly by
+  linking a scratch manifest covering every candidate `on =` value and reading `warnings` off `herdr
+  plugin list --json` (no live event needed for this half of the check; see the next point for the
+  other half). A name appearing in `herdr api schema --json` proves the *server* emits it, never that
+  a plugin may subscribe — and neither check is a one-time fact: re-run it after any herdr upgrade
+  before assuming last version's allowlist still holds.
+- **Accepted is not delivered.** Eight of the nine subscribed events were confirmed to actually invoke
+  the plugin. `workspace.moved` and `tab.moved` have no CLI, so triggering them means calling the
+  socket directly — newline-delimited JSON to `$HERDR_SOCKET_PATH`, e.g.
+  `{"id":"p","method":"workspace.move","params":{"workspace_id":"w1","insert_index":0}}`. The ninth,
+  `workspace.reordered` (added for 0.8.0's atomic worktree-group reordering / `workspace.move_block`),
+  is only confirmed *accepted*, not confirmed *delivered* — the CLI has no `move-block` subcommand
+  either, and triggering it live means either an actual worktree-group drag or the same raw-socket
+  approach with `{"method":"workspace.move_block","params":{"workspace_ids":[...],
+  "before_workspace_id":"..."}}`, both of which reorder the user's live workspaces. Don't run either
+  without asking first — unlike a metadata write, this changes visible session state the user is
+  looking at.
 - **`herdr plugin log list --limit N` returns the OLDEST N runs**, printed oldest-first. Reading
   `logs[0]` as "the latest run" gives a stale answer that looks plausible.
 - **Subscribe only to events that can renumber a row.** `workspace.focused` and `pane.created` were

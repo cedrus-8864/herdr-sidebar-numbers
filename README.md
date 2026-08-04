@@ -20,7 +20,7 @@ showing herdr's own labels.
 
 ## Install
 
-Requires [bun](https://bun.sh) and herdr 0.7.0+.
+Requires [bun](https://bun.sh) and herdr 0.8.0+.
 
 ```sh
 herdr plugin install cedrus-8864/herdr-sidebar-numbers
@@ -49,12 +49,15 @@ immediately.
 
 ## When it renumbers
 
-The plugin runs on the eight events that can move a row, each verified to
-actually fire on herdr 0.7.5: workspaces created, closed, or reordered; tabs
-reordered; panes closed, moved, or exited; and a pane being detected as an
-agent. It also runs at server startup, because herdr keeps metadata tokens in
-memory only — a restarted server would otherwise come back with an unnumbered
-sidebar until something happened.
+The plugin runs on the nine events that can move a row. Eight were verified to
+actually fire on herdr 0.7.5: workspaces created, closed, or individually
+moved; tabs reordered; panes closed, moved, or exited; and a pane being
+detected as an agent. The ninth, `workspace.reordered` (herdr 0.8.0's atomic
+worktree-group reordering), is confirmed *accepted* by the manifest parser but
+not yet confirmed *delivered* — see the events note in `herdr-plugin.toml`. It
+also runs at server startup, because herdr keeps metadata tokens in memory
+only — a restarted server would otherwise come back with an unnumbered sidebar
+until something happened.
 
 Nothing polls. If a number ever looks stale, `herdr plugin action invoke
 cedrus.sidebar-numbers.sync` recomputes everything.

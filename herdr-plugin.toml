@@ -1,7 +1,7 @@
 id = "cedrus.sidebar-numbers"
 name = "Sidebar Numbers"
-version = "0.2.0"
-min_herdr_version = "0.7.0"
+version = "0.3.0"
+min_herdr_version = "0.8.0"
 description = "Publish workspace/agent positions as a `num` metadata token so the sidebar can show them as $num."
 platforms = ["macos", "linux"]
 
@@ -30,6 +30,14 @@ command = ["bun", "number-sidebar.js"]
 
 [[events]]
 on = "workspace.moved"
+command = ["bun", "number-sidebar.js"]
+
+# herdr 0.8.0's atomic worktree-group reordering (workspace.move_block) fires
+# this instead of one workspace.moved per member -- confirmed accepted by the
+# manifest parser (0.7.5 rejected it: it didn't exist yet), not yet confirmed
+# delivered live. min_herdr_version bumped to 0.8.0 because of this line.
+[[events]]
+on = "workspace.reordered"
 command = ["bun", "number-sidebar.js"]
 
 # Agents follow tab order within a workspace, so a tab reorder shifts them.
