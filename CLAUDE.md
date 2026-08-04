@@ -86,7 +86,11 @@ Three decisions carry the design:
 - **herdr's CLI wants positionals before flags and rejects `--flag=value`.** Its errors name the
   argument it choked *after*, not the real cause.
 - **Custom `$` tokens only render as bare strings** in `rows`. `{ token = "$num", bold = true }`
-  passes `herdr config check` and then draws nothing.
+  passes `herdr config check` and then draws nothing. Confirmed the practical size of this on
+  `tab_cwd`: swapping it in for `workspace` on row 1 (`["$num", "state_icon", "$tab_cwd"]`) works and
+  updates live, but that row visibly goes dim next to every unstyled-but-still-bold-by-default
+  built-in row around it — screenshot-confirmed, not theoretical. Default layout keeps `workspace` on
+  row 1 and puts `tab_cwd` on its own `$pad`-led row instead, for exactly this reason.
 - **A spacer token always leaves the ` · ` herdr inserts after it on screen as a stray dot** — a row
   of *one* token has nothing to separate, so the dot only goes away by collapsing the row to a single
   composed token. `pad` on **agents** was tried and reverted this way: `$topic` in herdr-autolabel

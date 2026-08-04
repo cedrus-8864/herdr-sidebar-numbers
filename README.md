@@ -72,23 +72,31 @@ the renumbering list above.
 
 A workspace's own label is whatever you (or herdr) named it once — it doesn't
 say which of its tabs you're currently in. `$tab_cwd` is the basename of the
-working directory of a pane in your last-focused tab in that workspace, so the
-row reflects the project you're actually looking at right now:
+working directory of a pane in your last-focused tab in that workspace, so a
+row can show the project you're actually looking at right now:
 
 ```toml
 [ui.sidebar.spaces]
-rows = [["$num", "state_icon", "$tab_cwd"], ["$pad", "branch", "git_status"]]
+rows = [
+  ["$num", "state_icon", "workspace"],
+  ["$pad", "branch", "git_status"],
+  ["$pad", "$tab_cwd"],
+]
 ```
 
 ```
-3 · ○ api                   3 · ○ smartmenu-portal
-  · build-staging ↓21   ->    · build-staging ↓21
+3 · ○ api
+  · build-staging ↓21
+  · smartmenu-portal
 ```
 
-It's a custom token, so it can't be styled bold like the built-in `workspace`
-token it typically replaces — herdr only styles built-in tokens per their
-kind, and a custom token in a styled map (`{ token = "$tab_cwd", bold = true
-}`) passes `config check` and renders nothing (same trap as `$num`, below).
+It's on its own row, not swapped in for `workspace` on row 1, because a custom
+token can't be styled bold — herdr only styles built-in tokens per their kind,
+and a custom token in a styled map (`{ token = "$tab_cwd", bold = true }`)
+passes `config check` and **renders nothing at all**, not just unstyled (same
+trap as `$num`, below). Replacing `workspace` with `$tab_cwd` on row 1 works
+and updates live, but the row it lands on goes visibly dim compared to every
+row around it — pick that tradeoff deliberately, it isn't free.
 
 It reads a pane's `cwd` directly rather than parsing herdr-autolabel's
 rendered tab label (e.g. `"7 · smartmenu-portal · claude"`): parsing would tie
@@ -100,14 +108,19 @@ for a glanceable hint, and simplicity has to lose *some* precision somewhere.
 
 ## `$pad` — lining up a workspace's second row
 
-herdr indents an entry's second row by 2 columns, so it starts under the
-number rather than under the label. `$pad` is a spacer token that pushes it
-across, for a `["$num", "state_icon", <label>]` first row (`workspace` or
-`$tab_cwd` — the pad width doesn't depend on which):
+herdr indents an entry's second (and third, etc.) row by 2 columns, so it
+starts under the number rather than under the label. `$pad` is a spacer token
+that pushes it across, for a `["$num", "state_icon", <label>]` first row
+(`workspace` or `$tab_cwd` — the pad width doesn't depend on which); reuse it
+on every non-first row, `$tab_cwd`'s included:
 
 ```toml
 [ui.sidebar.spaces]
-rows = [["$num", "state_icon", "$tab_cwd"], ["$pad", "branch", "git_status"]]
+rows = [
+  ["$num", "state_icon", "workspace"],
+  ["$pad", "branch", "git_status"],
+  ["$pad", "$tab_cwd"],
+]
 ```
 
 ```
