@@ -15,6 +15,16 @@ import { dirname, join } from "node:path";
 const herdr = process.env.HERDR_BIN_PATH || "herdr";
 const SOURCE = "sidebar-numbers";
 
+// Spacer for a workspace's second sidebar row, so `branch`/`git_status` start
+// under `workspace` on the row above instead of under `$num`. Width is 1 cell,
+// confirmed empirically against a live `["$num", "state_icon", "workspace"]` /
+// ["$pad", "branch", "git_status"]` layout (screenshot-verified, not derived --
+// a from-scratch cell count for a *different* first row shape (agents')
+// previously produced a wrong guess). U+2800 (braille blank), not a space:
+// herdr trims a whitespace-only token value to empty and drops the token.
+// ponytail: fixed for that exact first row. Recount if either row's tokens change.
+export const WORKSPACE_PAD = "⠀";
+
 function json(args) {
   const r = spawnSync(herdr, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   if (r.status !== 0) {
@@ -23,16 +33,16 @@ function json(args) {
   return r.stdout.trim() ? JSON.parse(r.stdout) : null;
 }
 
-// herdr reports tokens as strings, so `num` is compared and written as one --
+// herdr reports tokens as strings, so a value is compared and written as one --
 // if that ever becomes a number the comparison silently writes on every run.
 // Skipping unchanged rows is what keeps an event burst from spawning a process
 // per row for nothing.
-function writeNum(kind, id, current, num) {
-  // An absent token reads as undefined; `num === null` means "clear it". Both
+function writeToken(kind, id, name, current, value) {
+  // An absent token reads as undefined; `value === null` means "clear it". Both
   // normalize to null so an already-absent token is not cleared every run.
-  if ((current ?? null) === num) return;
+  if ((current ?? null) === value) return;
   // herdr's CLI wants the positional before the flags and rejects --flag=value.
-  const flags = num === null ? ["--clear-token", "num"] : ["--token", `num=${num}`];
+  const flags = value === null ? ["--clear-token", name] : ["--token", `${name}=${value}`];
   json([kind, "report-metadata", id, "--source", SOURCE, ...flags]);
 }
 
@@ -61,7 +71,11 @@ if (import.meta.main) {
   const { workspaces, agents } = json(["api", "snapshot"]).result.snapshot;
 
   // Workspace numbers come straight from herdr and are correct under any sort.
-  workspaces.forEach((w) => writeNum("workspace", w.workspace_id, w.tokens?.num, String(w.number)));
+  // `pad` is independent of numbering: it aligns a row, it never points at one.
+  workspaces.forEach((w) => {
+    writeToken("workspace", w.workspace_id, "num", w.tokens?.num, String(w.number));
+    writeToken("workspace", w.workspace_id, "pad", w.tokens?.pad, WORKSPACE_PAD);
+  });
 
   const sort = agentPanelSort();
   const groupedByWorkspace = sort === "spaces" || sort === "workspaces";
@@ -70,7 +84,7 @@ if (import.meta.main) {
   // the "spaces" panel renders -- so list position is the shortcut digit.
   // Under any other sort we clear instead: a wrong digit is worse than none.
   agents.forEach((a, i) => {
-    writeNum("pane", a.pane_id, a.tokens?.num, groupedByWorkspace ? String(i + 1) : null);
+    writeToken("pane", a.pane_id, "num", a.tokens?.num, groupedByWorkspace ? String(i + 1) : null);
   });
 
   const note = groupedByWorkspace ? "" : ` (agent numbers cleared: agent_panel_sort = "${sort}")`;

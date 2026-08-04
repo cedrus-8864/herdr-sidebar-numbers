@@ -55,11 +55,40 @@ individually moved; tabs reordered; panes closed, moved, or exited; and a pane
 being detected as an agent), plus `workspace.reordered` on 0.8.0 (its atomic
 worktree-group reordering). It also runs at server startup, because herdr
 keeps metadata tokens in memory only — a restarted server would otherwise come
-back with an unnumbered sidebar
-until something happened.
+back with an unnumbered sidebar until something happened.
 
 Nothing polls. If a number ever looks stale, `herdr plugin action invoke
 cedrus.sidebar-numbers.sync` recomputes everything.
+
+## `$pad` — lining up a workspace's second row
+
+herdr indents an entry's second row by 2 columns, so it starts under the
+number rather than under the label. `$pad` is a spacer token that pushes it
+across, for a `["$num", "state_icon", "workspace"]` first row:
+
+```toml
+[ui.sidebar.spaces]
+rows = [["$num", "state_icon", "workspace"], ["$pad", "branch", "git_status"]]
+```
+
+```
+2 · ● expense-tracker          2 · ● expense-tracker
+  feat/auth/public-signup  ->    · feat/auth/public-signup
+```
+
+It is written on every workspace regardless of `agent_panel_sort` — it aligns
+a row, it never points at one. Ignore the token and nothing changes. Unlike
+`$num`, there's no way to make `branch`/`git_status` a single token the way
+`herdr-autolabel`'s `$topic` collapses an agent's second row: herdr's API
+exposes no `branch`/`git_status` field to compose one from, so the ` · `
+separator herdr inserts after `$pad` stays on screen — there is no way to
+remove it here.
+
+The pad is 1 cell wide, confirmed against the exact row shape above; it is
+**not** the same width as `herdr-autolabel`'s equivalent pad for an agent's
+second row, because that row has a different first-row shape. Recount before
+reusing this value anywhere else. It's U+2800 (braille blank), not a space —
+herdr trims a whitespace-only token value to empty and drops the token.
 
 ## Notes
 
@@ -74,7 +103,7 @@ list, so the plugin **clears** agent numbers instead of writing misleading ones
 way.
 
 Uninstalling leaves the last-written tokens behind; they simply stop updating.
-Remove `$num` from your `rows` to hide them.
+Remove `$num` / `$pad` from your `rows` to hide them.
 
 ## License
 

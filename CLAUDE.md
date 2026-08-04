@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A [herdr](https://herdr.dev) plugin (herdr = terminal workspace manager for AI agents). herdr invokes
 `bun number-sidebar.js` on subscribed events; the script writes each workspace's and each agent's
-1-based sidebar position into a `num` metadata token. The user then renders it as `$num` in their own
-`[ui.sidebar.*] rows`. No build step, no dependencies, no `package.json` — bun + node stdlib.
+1-based sidebar position into a `num` metadata token, plus a constant `pad` spacer on workspaces only.
+The user renders those as `$num` / `$pad` in their own `[ui.sidebar.*] rows`. No build step, no
+dependencies, no `package.json` — bun + node stdlib.
 
 ## Commands
 
@@ -82,11 +83,21 @@ Three decisions carry the design:
   argument it choked *after*, not the real cause.
 - **Custom `$` tokens only render as bare strings** in `rows`. `{ token = "$num", bold = true }`
   passes `herdr config check` and then draws nothing.
-- **Don't add a spacer token to align a second sidebar row.** It was tried and reverted. herdr inserts
-  `" · "` after a token, so a spacer shifts a row by 3 + its own width — never less than 4 cells — and
-  that separator stays on screen as a stray dot. A row of *one* token has nothing to separate, which
-  is why `$topic` lives in herdr-autolabel: aligning a row means owning its whole content, and that
-  means owning the freshness of a value herdr was already keeping live.
+- **A spacer token always leaves the ` · ` herdr inserts after it on screen as a stray dot** — a row
+  of *one* token has nothing to separate, so the dot only goes away by collapsing the row to a single
+  composed token. `pad` on **agents** was tried and reverted this way: `$topic` in herdr-autolabel
+  collapses that row to one token instead, because the topic *is* available to compose (`terminal_
+  title_stripped` is in the API). `pad` on **workspaces** stays a spacer with a visible dot, on
+  purpose — `branch`/`git_status` are **not** in `WorkspaceInfo`, so there is nothing to compose a
+  single token from, and a spacer plus a dot is the only alignment available. Don't try to remove the
+  dot here by copying the agents fix; that door doesn't exist for workspaces until herdr's API exposes
+  git info.
+- **Two `$pad`-shaped tokens, two different widths, not interchangeable.** `WORKSPACE_PAD` is 1 cell,
+  sized for `["$num", "state_icon", "workspace"]` as the first row; herdr-autolabel's agent-row pad
+  (reverted, but the reasoning still applies to any future one) was sized for a *different* first row
+  shape. Both were confirmed by a live screenshot, not derived from a general formula — the two rows
+  don't share enough structure for one constant to be safely reused between them. Recount from the
+  actual `rows` config before reusing either value anywhere else.
 - **Write metadata tokens, never `display_agent` or `title`.** Those look like display-only channels
   too, but they are *shared* — the sidebar, the pane borders and other plugins' notifiers all read
   them, so padding one to fix a sidebar column corrupts every other consumer. `tokens` is the only

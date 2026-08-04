@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { parseAgentPanelSort } from "./number-sidebar.js";
+import { WORKSPACE_PAD, parseAgentPanelSort } from "./number-sidebar.js";
 
 // Runs against the live herdr session on purpose: the things that break here
 // are herdr's CLI argument shape, the string-vs-number token comparison, and
@@ -16,6 +16,10 @@ test("every workspace and agent carries its 1-based position", () => {
 
   expect(snapshot.workspaces.map((w) => w.tokens?.num)).toEqual(
     snapshot.workspaces.map((w) => String(w.number)),
+  );
+  // A whitespace pad would be trimmed away and the token silently dropped.
+  expect(snapshot.workspaces.map((w) => w.tokens?.pad)).toEqual(
+    snapshot.workspaces.map(() => WORKSPACE_PAD),
   );
   expect(snapshot.agents.map((a) => a.tokens?.num)).toEqual(
     snapshot.agents.map((_, i) => String(i + 1)),
